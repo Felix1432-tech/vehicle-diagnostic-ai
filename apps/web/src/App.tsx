@@ -75,52 +75,40 @@ export default function App() {
     e.preventDefault();
     handleSearch();
   }}
->         </form>
-          <label className="field">
-            <span>Placa</span>
-            <input
-              type="text"
-              value={plate}
-              onChange={(event) => setPlate(event.target.value.toUpperCase())}
-              placeholder="ABC1D23"
-              aria-invalid={error ? "true" : "false"}
-              disabled={loading}
-            />
-          </label>
-          <button className="search-button" type="submit" disabled={loading}>
-            {loading ? "buscando..." : "buscar"}
-          </button>
-          {loading ? <p className="feedback loading">Buscando dados do veículo...</p> : null}
-          {error ? <p className="feedback error">{error}</p> : null}
-          {vehicle ? (
-            <div className="result-card">
-              <h2>Resultado</h2>
-              <dl>
-                <div>
-                  <dt>Placa</dt>
-                  <dd>{vehicle.plate}</dd>
-                </div>
-                <div>
-                  <dt>Marca</dt>
-                  <dd>{vehicle.brand}</dd>
-                </div>
-                <div>
-                  <dt>Modelo</dt>
-                  <dd>{vehicle.model}</dd>
-                </div>
-                <div>
-                  <dt>Ano</dt>
-                  <dd>{vehicle.year}</dd>
-                </div>
-              </dl>
-              <div className="diagnostic-card">
-                <p className="diagnostic-label">Sugestão inicial</p>
-                <p className="diagnostic-copy">{vehicle.diagnostic}</p>
-              </div>
-            </div>
-          ) : null}
-        </div>
-      </section>
-    </main>
-  );
-}
+>
+  <label className="field">
+    <span>Placa</span>
+    <input
+      type="text"
+      value={plate}
+      onChange={(e) => setPlate(e.target.value.toUpperCase())}
+      placeholder="ABC1D23"
+      aria-invalid={error ? "true" : "false"}
+      disabled={loading}
+    />
+  </label>
+
+  <button className="search-button" type="submit" disabled={loading}>
+    {loading ? "buscando..." : "buscar"}
+  </button>
+
+  {loading && <p className="feedback loading">Buscando dados do veículo...</p>}
+  {error && <p className="feedback error">{error}</p>}
+
+  {vehicle && (
+    <div className="result-card">
+      <h2>Resultado</h2>
+      <dl>
+        <div><dt>Placa</dt><dd>{vehicle.plate}</dd></div>
+        <div><dt>Marca</dt><dd>{vehicle.brand}</dd></div>
+        <div><dt>Modelo</dt><dd>{vehicle.model}</dd></div>
+        <div><dt>Ano</dt><dd>{vehicle.year}</dd></div>
+      </dl>
+
+      <div className="diagnostic-card">
+        <p className="diagnostic-label">Sugestão inicial</p>
+        <p className="diagnostic-copy">{vehicle.diagnostic}</p>
+      </div>
+    </div>
+  )}
+</form>
