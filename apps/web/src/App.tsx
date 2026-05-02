@@ -6,6 +6,7 @@ import {
 import { useState } from "react";
 
 const invalidPlateMessage = "Placa inválida. Use formato ABC1234 ou ABC1D23";
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ?? "";
 
 export default function App() {
   const [plate, setPlate] = useState("");
@@ -27,7 +28,7 @@ export default function App() {
     setLoading(true);
 
     try {
-      const response = await fetch("/vehicle/identify", {
+      const response = await fetch(`${apiBaseUrl}/vehicle/identify`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
