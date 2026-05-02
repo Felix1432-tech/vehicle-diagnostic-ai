@@ -69,7 +69,13 @@ export default function App() {
         <p className="copy">
           Estrutura base do frontend criada com Vite, React e TypeScript.
         </p>
-        <div className="panel">
+        <form
+  className="panel"
+  onSubmit={(e) => {
+    e.preventDefault();
+    handleSearch();
+  }}
+>         </form>
           <label className="field">
             <span>Placa</span>
             <input
@@ -81,7 +87,7 @@ export default function App() {
               disabled={loading}
             />
           </label>
-          <button className="search-button" type="button" onClick={handleSearch} disabled={loading}>
+          <button className="search-button" type="submit" disabled={loading}>
             {loading ? "buscando..." : "buscar"}
           </button>
           {loading ? <p className="feedback loading">Buscando dados do veículo...</p> : null}
