@@ -1,0 +1,22 @@
+{
+  "generated_at": "2026-05-02T08:25:00Z",
+  "project_root": "C:\\Users\\ACER_2025\\claude free",
+  "languages": [],
+  "primary_language": "None",
+  "frameworks": [],
+  "package_manager": "unknown",
+  "entry_points": [],
+  "config_files": [
+    "implementation_plan.md"
+  ],
+  "ci_cd": [],
+  "docker": {
+    "dockerfile": "",
+    "compose": ""
+  },
+  "database_hints": [],
+  "test_framework": "None",
+  "test_file_count": 0,
+  "modules": [],
+  "total_files": 151
+}

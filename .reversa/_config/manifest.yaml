@@ -1,0 +1,30 @@
+installation:
+  version: 1.2.14
+  installDate: 2026-05-01T22:05:09.058Z
+  lastUpdated: 2026-05-01T22:05:09.058Z
+
+engines:
+  - claude-code
+  - codex
+  - cursor
+  - gemini-cli
+  - windsurf
+  - antigravity
+  - kiro
+  - opencode
+  - github-copilot
+  - amazon-q
+
+agents:
+  - reversa
+  - reversa-scout
+  - reversa-archaeologist
+  - reversa-detective
+  - reversa-architect
+  - reversa-writer
+  - reversa-reviewer
+  - reversa-visor
+  - reversa-data-master
+  - reversa-design-system
+  - reversa-agents-help
+  - reversa-reconstructor
