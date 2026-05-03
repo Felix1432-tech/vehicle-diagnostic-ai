@@ -1,4 +1,4 @@
-import type { VehicleDescriptor } from "../../core/vehicle";
+import type { VehicleDescriptor } from "../../core/vehicle.js";
 
 export type LlmAdapter = {
   generateDiagnostic(prompt: string, vehicle: VehicleDescriptor): Promise<string>;

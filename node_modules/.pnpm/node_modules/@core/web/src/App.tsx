@@ -1,8 +1,8 @@
 import {
   identifyVehicleRequestSchema,
-  identifyVehicleResponseSchema,
-  type IdentifyVehicleResponse
-} from "@core/shared";
+  identifyVehicleResponseSchema
+} from "@core/shared/schemas";
+import type { IdentifyVehicleResponse } from "@core/shared/types";
 import { useState } from "react";
 
 const invalidPlateMessage = "Placa inválida. Use formato ABC1234 ou ABC1D23";
@@ -69,46 +69,65 @@ export default function App() {
         <p className="copy">
           Estrutura base do frontend criada com Vite, React e TypeScript.
         </p>
+
         <form
-  className="panel"
-  onSubmit={(e) => {
-    e.preventDefault();
-    handleSearch();
-  }}
->
-  <label className="field">
-    <span>Placa</span>
-    <input
-      type="text"
-      value={plate}
-      onChange={(e) => setPlate(e.target.value.toUpperCase())}
-      placeholder="ABC1D23"
-      aria-invalid={error ? "true" : "false"}
-      disabled={loading}
-    />
-  </label>
+          className="panel"
+          onSubmit={(event) => {
+            event.preventDefault();
+            handleSearch();
+          }}
+        >
+          <label className="field">
+            <span>Placa</span>
+            <input
+              type="text"
+              value={plate}
+              onChange={(event) => setPlate(event.target.value.toUpperCase())}
+              placeholder="ABC1D23"
+              aria-invalid={error ? "true" : "false"}
+              disabled={loading}
+            />
+          </label>
 
-  <button className="search-button" type="submit" disabled={loading}>
-    {loading ? "buscando..." : "buscar"}
-  </button>
+          <button className="search-button" type="submit" disabled={loading}>
+            {loading ? "buscando..." : "buscar"}
+          </button>
 
-  {loading && <p className="feedback loading">Buscando dados do veículo...</p>}
-  {error && <p className="feedback error">{error}</p>}
+          {loading ? (
+            <p className="feedback loading">Buscando dados do veículo...</p>
+          ) : null}
+          {error ? <p className="feedback error">{error}</p> : null}
 
-  {vehicle && (
-    <div className="result-card">
-      <h2>Resultado</h2>
-      <dl>
-        <div><dt>Placa</dt><dd>{vehicle.plate}</dd></div>
-        <div><dt>Marca</dt><dd>{vehicle.brand}</dd></div>
-        <div><dt>Modelo</dt><dd>{vehicle.model}</dd></div>
-        <div><dt>Ano</dt><dd>{vehicle.year}</dd></div>
-      </dl>
+          {vehicle ? (
+            <div className="result-card">
+              <h2>Resultado</h2>
+              <dl>
+                <div>
+                  <dt>Placa</dt>
+                  <dd>{vehicle.plate}</dd>
+                </div>
+                <div>
+                  <dt>Marca</dt>
+                  <dd>{vehicle.brand}</dd>
+                </div>
+                <div>
+                  <dt>Modelo</dt>
+                  <dd>{vehicle.model}</dd>
+                </div>
+                <div>
+                  <dt>Ano</dt>
+                  <dd>{vehicle.year}</dd>
+                </div>
+              </dl>
 
-      <div className="diagnostic-card">
-        <p className="diagnostic-label">Sugestão inicial</p>
-        <p className="diagnostic-copy">{vehicle.diagnostic}</p>
-      </div>
-    </div>
-  )}
-</form>
+              <div className="diagnostic-card">
+                <p className="diagnostic-label">Sugestão inicial</p>
+                <p className="diagnostic-copy">{vehicle.diagnostic}</p>
+              </div>
+            </div>
+          ) : null}
+        </form>
+      </section>
+    </main>
+  );
+}

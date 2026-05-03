@@ -1,5 +1,5 @@
-import { createMockLlmAdapter } from "../adapters/llm/mockLlmAdapter";
-import type { VehicleDescriptor } from "../core/vehicle";
+import { createMockLlmAdapter } from "../adapters/llm/mockLlmAdapter.js";
+import type { VehicleDescriptor } from "../core/vehicle.js";
 
 const llmAdapter = createMockLlmAdapter();
 

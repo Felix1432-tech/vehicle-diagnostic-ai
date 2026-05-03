@@ -3,14 +3,14 @@ services:
     name: vehicle-diagnostic-core-api
     runtime: node
     rootDir: .
-    buildCommand: pnpm install --no-frozen-lockfile && pnpm --filter @core/api build
+    buildCommand: pnpm install --no-frozen-lockfile && pnpm --filter @core/shared build && pnpm --filter @core/api build
     startCommand: pnpm --filter @core/api start
     plan: free
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 3001
+      - key: CORS_ORIGIN
+        sync: false
       - key: PLATE_PROVIDER
         value: mock
       - key: OPENAI_API_KEY

@@ -3,7 +3,7 @@ import {
   identifyVehicleRequestSchema,
   identifyVehicleResponseSchema,
   vehicleIdentitySchema
-} from "../schemas/vehicle";
+} from "../schemas/vehicle.js";
 
 export type VehicleIdentity = z.infer<typeof vehicleIdentitySchema>;
 export type IdentifyVehicleRequest = z.infer<typeof identifyVehicleRequestSchema>;

@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "pnpm -r --parallel --if-present dev",
     "build": "pnpm -r --if-present build",
-    "build:web": "pnpm --filter @core/web build",
-    "build:api": "pnpm --filter @core/api build",
+    "build:web": "pnpm --filter @core/shared build && pnpm --filter @core/web build",
+    "build:api": "pnpm --filter @core/shared build && pnpm --filter @core/api build",
+    "start": "pnpm --filter @core/api start",
     "start:api": "pnpm --filter @core/api start",
     "lint": "pnpm -r --if-present lint"
   }
