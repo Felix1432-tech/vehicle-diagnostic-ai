@@ -32,100 +32,101 @@ function isValidPlate(p: string): boolean {
   return /^[A-Z]{3}[0-9]{4}$/.test(p) || /^[A-Z]{3}[0-9][A-Z][0-9]{2}$/.test(p);
 }
 
-// ─── APIBrasil: dados ─────────────────────────────────────────────────────────
+// ─── APIBrasil: /consulta/veiculos/credits ───────────────────────────────────
+// Endpoint único — retorna dados do veículo + FIPE histórico em resultados[]
+// Shape: { status_code, error, data: { resultados: [ { marca, modelo, anoModelo,
+//   combustivel, cor, valor, mesReferencia, codigoFipe, principal, historico[] } ] } }
 
-interface ApiBrasilDados {
-  MARCA?: string;
-  MODELO?: string;
-  COR?: string;
-  COMBUSTIVEL?: string;
-  ano?: string | number;
-  anoModelo?: string | number;
-  body?: Record<string, unknown>;
-  data?: Record<string, unknown>;
+interface ApiBrasilResultado {
+  marca?:         string;
+  modelo?:        string;
+  anoModelo?:     string | number;
+  anoFabricacao?: number;
+  combustivel?:   string;
+  cor?:           string;
+  valor?:         number;
+  mesReferencia?: string;
+  codigoFipe?:    string;
+  principal?:     boolean;
+  chassi?:        string;
+  [key: string]:  unknown;
+}
+
+interface ApiBrasilResponse {
+  status_code?: number;
+  error?:       boolean;
+  message?:     string;
+  data?: {
+    resultados?: ApiBrasilResultado[];
+  };
   [key: string]: unknown;
 }
 
-async function fetchDados(plate: string, token: string): Promise<{
-  brand: string; model: string; year: string; fuel: string; color: string;
-} | null> {
-  console.log("[dados] →", plate);
+function formatBRL(value: number): string {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })
+    .format(value);
+}
 
-  const res = await fetch("https://gateway.apibrasil.io/api/v2/vehicles/dados", {
+async function fetchVehicle(plate: string, token: string): Promise<{
+  brand: string; model: string; year: string; fuel: string; color: string;
+  fipe: { value: string | null; reference: string | null };
+} | null> {
+  console.log("[apibrasil] → placa:", plate);
+
+  const res = await fetch("https://gateway.apibrasil.io/api/v2/consulta/veiculos/credits", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${token}`,
     },
     body: JSON.stringify({ placa: plate }),
-    signal: AbortSignal.timeout(15_000),
+    signal: AbortSignal.timeout(20_000),
   });
 
   const raw = await res.text();
-  console.log(`[dados] status=${res.status} body=${raw.slice(0, 400)}`);
+  console.log(`[apibrasil] status=${res.status} body=${raw.slice(0, 500)}`);
 
   if (!res.ok) return null;
 
-  let parsed: ApiBrasilDados;
-  try { parsed = JSON.parse(raw); } catch { return null; }
+  let parsed: ApiBrasilResponse;
+  try { parsed = JSON.parse(raw); } catch { console.error("[apibrasil] JSON inválido"); return null; }
 
-  // APIBrasil às vezes aninha em .body ou .data
-  const d: ApiBrasilDados = (parsed.body as ApiBrasilDados) ?? (parsed.data as ApiBrasilDados) ?? parsed;
-
-  const brand = String(d.MARCA ?? "").trim();
-  const model = String(d.MODELO ?? "").trim();
-  const year  = String(d.anoModelo ?? d.ano ?? "").trim();
-  const fuel  = String(d.COMBUSTIVEL ?? "").trim();
-  const color = String(d.COR ?? "").trim();
-
-  if (!brand || !model) {
-    console.error("[dados] dados insuficientes:", JSON.stringify(d).slice(0, 200));
+  if (parsed.error || parsed.status_code === 404) {
+    console.error("[apibrasil] erro na resposta:", parsed.message);
     return null;
   }
 
-  return { brand, model, year: year || "N/A", fuel: fuel || "N/A", color: color || "N/A" };
-}
+  const resultados = parsed.data?.resultados ?? [];
+  if (resultados.length === 0) {
+    console.error("[apibrasil] resultados vazios");
+    return null;
+  }
 
-// ─── APIBrasil: fipe ──────────────────────────────────────────────────────────
+  // Prioriza o item marcado como principal, senão pega o primeiro
+  const item: ApiBrasilResultado = resultados.find((r) => r.principal === true) ?? resultados[0];
 
-interface ApiBrasilFipe {
-  FIPE_Preco?: string;
-  preco?: string;
-  valor?: string;
-  MesReferencia?: string;
-  mesReferencia?: string;
-  body?: Record<string, unknown>;
-  data?: Record<string, unknown>;
-  [key: string]: unknown;
-}
+  const brand = String(item.marca  ?? "").trim();
+  const model = String(item.modelo ?? "").trim();
+  const year  = String(item.anoModelo ?? item.anoFabricacao ?? "").trim();
+  const fuel  = String(item.combustivel ?? "").trim();
+  const color = String(item.cor ?? "").trim();
 
-async function fetchFipe(plate: string, token: string): Promise<{ value: string; reference: string } | null> {
-  console.log("[fipe] →", plate);
+  if (!brand || !model) {
+    console.error("[apibrasil] marca/modelo ausentes no item:", JSON.stringify(item).slice(0, 200));
+    return null;
+  }
 
-  const res = await fetch("https://gateway.apibrasil.io/api/v2/vehicles/fipe", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
-    },
-    body: JSON.stringify({ placa: plate }),
-    signal: AbortSignal.timeout(15_000),
-  });
+  const fipeValue = typeof item.valor === "number" ? formatBRL(item.valor) : null;
+  const fipeRef   = String(item.mesReferencia ?? "").trim() || null;
 
-  const raw = await res.text();
-  console.log(`[fipe] status=${res.status} body=${raw.slice(0, 300)}`);
-
-  if (!res.ok) return null;
-
-  let parsed: ApiBrasilFipe;
-  try { parsed = JSON.parse(raw); } catch { return null; }
-
-  const d: ApiBrasilFipe = (parsed.body as ApiBrasilFipe) ?? (parsed.data as ApiBrasilFipe) ?? parsed;
-
-  const value = String(d.FIPE_Preco ?? d.preco ?? d.valor ?? "").trim();
-  const ref   = String(d.MesReferencia ?? d.mesReferencia ?? "").trim();
-
-  return value ? { value, reference: ref || "N/A" } : null;
+  console.log(`[apibrasil] ✓ ${brand} ${model} ${year} | FIPE: ${fipeValue}`);
+  return {
+    brand, model,
+    year:  year  || "N/A",
+    fuel:  fuel  || "N/A",
+    color: color || "N/A",
+    fipe: { value: fipeValue, reference: fipeRef },
+  };
 }
 
 // ─── diagnosis generation ─────────────────────────────────────────────────────
@@ -316,29 +317,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json(n8nResult);
     }
 
-    // ── Camada 2: APIBrasil ────────────────────────────────────────────────
+    // ── Camada 2: APIBrasil (endpoint único — dados + FIPE juntos) ────────────
     const apiBrasilKey = process.env.APIBRASIL_KEY;
     if (apiBrasilKey) {
-      // dados + fipe em paralelo
-      const [vehicleData, fipeData] = await Promise.allSettled([
-        fetchDados(plate, apiBrasilKey),
-        fetchFipe(plate, apiBrasilKey),
-      ]);
+      const vehicleData = await fetchVehicle(plate, apiBrasilKey);
 
-      const vehicle = vehicleData.status === "fulfilled" ? vehicleData.value : null;
-
-      if (vehicle) {
-        const diagnosis = await generateDiagnosis(vehicle.brand, vehicle.model, vehicle.year);
-        const fipe =
-          fipeData.status === "fulfilled" && fipeData.value
-            ? fipeData.value
-            : { value: null, reference: null };
+      if (vehicleData) {
+        const diagnosis = await generateDiagnosis(vehicleData.brand, vehicleData.model, vehicleData.year);
 
         console.log("[identify] ✓ respondido via APIBrasil");
         return res.status(200).json({
           source: "apibrasil",
-          vehicle: { ...vehicle, plate },
-          fipe,
+          vehicle: { ...vehicleData, plate },
+          fipe: vehicleData.fipe,
           diagnosis,
         } satisfies DiagnosticResponse);
       }
