@@ -73,7 +73,10 @@ async function fetchVehicle(plate: string, token: string): Promise<{
 } | null> {
   console.log("[apibrasil] → placa:", plate);
 
-  const res = await fetch("https://gateway.apibrasil.io/api/v2/consulta/veiculos/credits", {
+  const endpoint = process.env.APIBRASIL_URL ?? "https://gateway.apibrasil.io/api/v2/consulta/veiculos/credits";
+  console.log("[apibrasil] endpoint:", endpoint);
+
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
