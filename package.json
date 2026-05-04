@@ -11,5 +11,8 @@
     "start": "pnpm --filter @core/api start",
     "start:api": "pnpm --filter @core/api start",
     "lint": "pnpm -r --if-present lint"
+  },
+  "devDependencies": {
+    "@vercel/node": "^5.7.15"
   }
 }

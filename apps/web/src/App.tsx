@@ -1,61 +1,35 @@
-import {
-  identifyVehicleRequestSchema,
-  identifyVehicleResponseSchema
-} from "@core/shared/schemas";
-import type { IdentifyVehicleResponse } from "@core/shared/types";
-import { useState } from "react";
 
-const invalidPlateMessage = "Placa inválida. Use formato ABC1234 ou ABC1D23";
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ?? "";
+import { useState } from "react";
 
 export default function App() {
   const [plate, setPlate] = useState("");
-  const [vehicle, setVehicle] = useState<IdentifyVehicleResponse | null>(null);
+  const [vehicle, setVehicle] = useState<any>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSearch = async () => {
+    setLoading(true);
     setError("");
     setVehicle(null);
 
-    const parseResult = identifyVehicleRequestSchema.safeParse({ plate });
-
-    if (!parseResult.success) {
-      setError(invalidPlateMessage);
-      return;
-    }
-
-    setLoading(true);
-
     try {
-      const response = await fetch(`${apiBaseUrl}/vehicle/identify`, {
+      const response = await fetch("/api/vehicle/identify", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(parseResult.data)
+        body: JSON.stringify({ plate })
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as
-          | { message?: string }
-          | null;
-
-        if (response.status === 400) {
-          throw new Error(invalidPlateMessage);
-        }
-
-        throw new Error(payload?.message ?? "Não foi possível identificar o veículo.");
+        throw new Error(data.message || "Erro");
       }
 
-      const data = identifyVehicleResponseSchema.parse(await response.json());
       setVehicle(data);
-    } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Ocorreu um erro inesperado ao identificar o veículo."
-      );
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -64,68 +38,29 @@ export default function App() {
   return (
     <main className="app-shell">
       <section className="hero">
-        <p className="eyebrow">Core Platform</p>
         <h1>Vehicle Diagnostic</h1>
-        <p className="copy">
-          Estrutura base do frontend criada com Vite, React e TypeScript.
-        </p>
 
         <form
-          className="panel"
-          onSubmit={(event) => {
-            event.preventDefault();
+          onSubmit={(e) => {
+            e.preventDefault();
             handleSearch();
           }}
         >
-          <label className="field">
-            <span>Placa</span>
-            <input
-              type="text"
-              value={plate}
-              onChange={(event) => setPlate(event.target.value.toUpperCase())}
-              placeholder="ABC1D23"
-              aria-invalid={error ? "true" : "false"}
-              disabled={loading}
-            />
-          </label>
+          <input
+            value={plate}
+            onChange={(e) => setPlate(e.target.value.toUpperCase())}
+            placeholder="ABC1D23"
+          />
 
-          <button className="search-button" type="submit" disabled={loading}>
-            {loading ? "buscando..." : "buscar"}
+          <button type="submit" disabled={loading}>
+            {loading ? "Buscando..." : "Buscar"}
           </button>
 
-          {loading ? (
-            <p className="feedback loading">Buscando dados do veículo...</p>
-          ) : null}
-          {error ? <p className="feedback error">{error}</p> : null}
+          {error && <p>{error}</p>}
 
-          {vehicle ? (
-            <div className="result-card">
-              <h2>Resultado</h2>
-              <dl>
-                <div>
-                  <dt>Placa</dt>
-                  <dd>{vehicle.plate}</dd>
-                </div>
-                <div>
-                  <dt>Marca</dt>
-                  <dd>{vehicle.brand}</dd>
-                </div>
-                <div>
-                  <dt>Modelo</dt>
-                  <dd>{vehicle.model}</dd>
-                </div>
-                <div>
-                  <dt>Ano</dt>
-                  <dd>{vehicle.year}</dd>
-                </div>
-              </dl>
-
-              <div className="diagnostic-card">
-                <p className="diagnostic-label">Sugestão inicial</p>
-                <p className="diagnostic-copy">{vehicle.diagnostic}</p>
-              </div>
-            </div>
-          ) : null}
+          {vehicle && (
+            <pre>{JSON.stringify(vehicle, null, 2)}</pre>
+          )}
         </form>
       </section>
     </main>
