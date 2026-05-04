@@ -29,16 +29,16 @@
 
 ## Fase 4: Geração 📝
 
-- [ ] **Redator** — Specs SDD por componente
-- [ ] **Redator** — OpenAPI (se aplicável)
-- [ ] **Redator** — User Stories (se aplicável)
-- [ ] **Redator** — Code/Spec Matrix
+- [x] **Redator** — Specs SDD por componente (shared-schemas, api-server, api-diagnostic-service, web-app)
+- [x] **Redator** — OpenAPI (vehicle-diagnostic-api.yaml)
+- [x] **Redator** — User Stories (busca-por-placa, diagnostico-veiculo — 6 stories)
+- [x] **Redator** — Code/Spec Matrix (15 arquivos, 100% cobertura)
 
 ## Fase 5: Revisão ✅
 
-- [ ] **Revisor** — Revisão cruzada de specs
-- [ ] **Revisor** — Resolução de lacunas com o usuário
-- [ ] **Revisor** — Relatório de confiança final
+- [x] **Revisor** — Revisão cruzada de specs (0 contradições, 0 reclassificações)
+- [x] **Revisor** — Resolução de lacunas com o usuário (5 perguntas respondidas e implementadas)
+- [x] **Revisor** — Relatório de confiança final (90.9% — 190🟢 11🟡 14🔴)
 
 ---
 

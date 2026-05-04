@@ -1,9 +1,8 @@
-import { createMockLlmAdapter } from "../adapters/llm/mockLlmAdapter.js";
-import type { VehicleDescriptor } from "../core/vehicle.js";
+import { createMockLlmAdapter, type DiagnosticInput } from "../adapters/llm/mockLlmAdapter.js";
 
 const llmAdapter = createMockLlmAdapter();
 
-export const generateDiagnosis = (vehicle: VehicleDescriptor) => {
+export const generateDiagnosis = (vehicle: DiagnosticInput) => {
   const brand = vehicle.brand.toLowerCase();
   const model = vehicle.model.toLowerCase();
 
@@ -26,7 +25,7 @@ export const generateDiagnosis = (vehicle: VehicleDescriptor) => {
   return "Recomendamos uma verificação completa do sistema de ignição e injeção.";
 };
 
-export const buildDiagnosticPrompt = (vehicle: VehicleDescriptor) => {
+export const buildDiagnosticPrompt = (vehicle: DiagnosticInput) => {
   return [
     "Você é um assistente técnico automotivo.",
     "Gere um diagnóstico inicial curto e estruturado.",
@@ -37,13 +36,18 @@ export const buildDiagnosticPrompt = (vehicle: VehicleDescriptor) => {
   ].join("\n");
 };
 
-export const generateDiagnosisWithAI = async (vehicle: VehicleDescriptor) => {
-  const prompt = buildDiagnosticPrompt(vehicle);
-  const aiOutput = await llmAdapter.generateDiagnostic(prompt, vehicle);
+export const generateDiagnosisWithAI = async (vehicle: DiagnosticInput) => {
+  try {
+    const prompt = buildDiagnosticPrompt(vehicle);
+    const aiOutput = await llmAdapter.generateDiagnostic(prompt, vehicle);
 
-  if (!aiOutput || !aiOutput.trim()) {
+    if (!aiOutput || !aiOutput.trim()) {
+      return generateDiagnosis(vehicle);
+    }
+
+    return aiOutput;
+  } catch (err) {
+    console.error("LLM adapter falhou, usando fallback por regras:", err);
     return generateDiagnosis(vehicle);
   }
-
-  return aiOutput;
 };

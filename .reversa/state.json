@@ -7,16 +7,15 @@
   "answer_mode": "chat",
   "doc_level": "detalhado",
   "output_folder": "_reversa_sdd",
-  "phase": "geracao",
+  "phase": "concluido",
   "completed": [
     "reconhecimento",
     "escavacao",
-    "interpretacao"
-  ],
-  "pending": [
+    "interpretacao",
     "geracao",
     "revisao"
   ],
+  "pending": [],
   "checkpoints": {
     "scout": {
       "completed_at": "2026-05-02T08:25:00Z",
@@ -25,6 +24,33 @@
         "_reversa_sdd/dependencies.md",
         ".reversa/context/surface.json"
       ]
+    },
+    "writer": {
+      "completed_at": "2026-05-03T12:00:00Z",
+      "files": [
+        "_reversa_sdd/sdd/shared-schemas.md",
+        "_reversa_sdd/sdd/api-server.md",
+        "_reversa_sdd/sdd/api-diagnostic-service.md",
+        "_reversa_sdd/sdd/web-app.md",
+        "_reversa_sdd/openapi/vehicle-diagnostic-api.yaml",
+        "_reversa_sdd/user-stories/busca-por-placa.md",
+        "_reversa_sdd/user-stories/diagnostico-veiculo.md",
+        "_reversa_sdd/traceability/code-spec-matrix.md"
+      ],
+      "redator_progress": {
+        "total": 8,
+        "completed": 8,
+        "items": [
+          "sdd/shared-schemas.md",
+          "sdd/api-server.md",
+          "sdd/api-diagnostic-service.md",
+          "sdd/web-app.md",
+          "openapi/vehicle-diagnostic-api.yaml",
+          "user-stories/busca-por-placa.md",
+          "user-stories/diagnostico-veiculo.md",
+          "traceability/code-spec-matrix.md"
+        ]
+      }
     }
   },
   "engines": [

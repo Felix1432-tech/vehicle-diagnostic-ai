@@ -1,7 +1,9 @@
-import type { VehicleDescriptor } from "../../core/vehicle.js";
+import type { VehicleIdentity } from "@core/shared/types";
+
+export type DiagnosticInput = Pick<VehicleIdentity, "brand" | "model"> & { year: string };
 
 export type LlmAdapter = {
-  generateDiagnostic(prompt: string, vehicle: VehicleDescriptor): Promise<string>;
+  generateDiagnostic(prompt: string, vehicle: DiagnosticInput): Promise<string>;
 };
 
 export const createMockLlmAdapter = (): LlmAdapter => {

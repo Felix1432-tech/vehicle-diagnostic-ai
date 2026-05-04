@@ -1,0 +1,336 @@
+openapi: 3.1.0
+info:
+  title: Vehicle Diagnostic Core API
+  version: 0.1.0
+  description: |
+    API REST do Vehicle Diagnostic Core.
+    Identifica veiculos por placa e retorna diagnostico automotivo inicial.
+
+    **Estado atual do codigo:**
+    - `GET /health` — implementado e funcional.
+    - `POST /vehicle/identify` — logica implementada em `diagnosticService.ts`,
+      mas a rota NAO esta registrada em `server.ts`. Retorna 404 em producao.
+
+    Spec gerada pelo Reversa Writer em 2026-05-03.
+    Nivel de documentacao: detalhado.
+
+servers:
+  - url: http://localhost:3000
+    description: Desenvolvimento local (porta padrao)
+  - url: https://{render-service}.onrender.com
+    description: Deploy Render.com (producao)
+    variables:
+      render-service:
+        default: vehicle-diagnostic-core
+        description: Nome do servico no Render
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Health check do servidor
+      description: |
+        Retorna status do servidor para monitoramento externo.
+        Unico endpoint funcional atualmente.
+
+        **Divergencia detectada:** O codigo retorna apenas `{ status: "ok" }`,
+        mas o `healthResponseSchema` do `@core/shared` espera tambem `service` e `env`.
+      tags:
+        - Monitoramento
+      responses:
+        "200":
+          description: Servidor operacional
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponseActual"
+              examples:
+                sucesso:
+                  summary: Resposta real do servidor
+                  value:
+                    status: "ok"
+                esperado-pelo-schema:
+                  summary: Resposta esperada pelo healthResponseSchema do shared
+                  value:
+                    status: "ok"
+                    service: "vehicle-diagnostic-core"
+                    env: "production"
+
+  /vehicle/identify:
+    post:
+      operationId: identifyVehicle
+      summary: Identifica veiculo por placa e retorna diagnostico
+      description: |
+        Recebe uma placa veicular, identifica o veiculo e retorna
+        dados basicos com diagnostico automotivo inicial.
+
+        **ATENCAO:** Esta rota NAO esta registrada em `server.ts`.
+        O frontend (`App.tsx`) chama este endpoint, mas o servidor
+        retorna 404. A logica existe em `diagnosticService.ts` mas
+        nao esta conectada.
+
+        **Fluxo esperado (quando implementado):**
+        1. Validar placa com `identifyVehicleRequestSchema`
+        2. Identificar veiculo (lookup ou API externa)
+        3. Gerar diagnostico via `generateDiagnosisWithAI()`
+        4. Retornar resposta conforme `identifyVehicleResponseSchema`
+      tags:
+        - Diagnostico
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IdentifyVehicleRequest"
+            examples:
+              placa-formato-antigo:
+                summary: Placa formato antigo (ABC1234)
+                value:
+                  plate: "ABC1234"
+              placa-formato-mercosul:
+                summary: Placa formato Mercosul (ABC1D23)
+                value:
+                  plate: "ABC1D23"
+              placa-com-hifen:
+                summary: Placa com hifen (removido pelo transform)
+                description: |
+                  O schema Zod remove hifens e converte para uppercase
+                  antes da validacao de formato.
+                value:
+                  plate: "abc-1d23"
+              placa-lowercase:
+                summary: Placa em lowercase (convertida para uppercase)
+                value:
+                  plate: "abc1234"
+      responses:
+        "200":
+          description: Veiculo identificado com diagnostico
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IdentifyVehicleResponse"
+              examples:
+                toyota-corolla:
+                  summary: Veiculo conhecido — diagnostico por regras
+                  value:
+                    plate: "ABC1234"
+                    brand: "Toyota"
+                    model: "Corolla"
+                    year: "2020"
+                    diagnostic: "Possivel falha comum em Corolla: bobina de ignicao."
+                volkswagen-gol:
+                  summary: Volkswagen Gol — diagnostico por regras
+                  value:
+                    plate: "DEF5G67"
+                    brand: "Volkswagen"
+                    model: "Gol G5 1.0"
+                    year: "2015"
+                    diagnostic: "Possivel falha comum em Gol: desgaste em cabos de vela e corpo de borboleta."
+                fiat-uno:
+                  summary: Fiat Uno — diagnostico por regras
+                  value:
+                    plate: "GHI6789"
+                    brand: "Fiat"
+                    model: "Uno Mille"
+                    year: "2012"
+                    diagnostic: "Possivel falha comum em Uno: sujeira no sistema de injecao e falha em velas."
+                ford-ranger:
+                  summary: Ford Ranger — diagnostico por regras
+                  value:
+                    plate: "JKL2M34"
+                    brand: "Ford"
+                    model: "Ranger XLT"
+                    year: "2022"
+                    diagnostic: "Possivel falha comum em Ranger: verificar bicos injetores, sensor MAF e pressao de combustivel."
+                veiculo-generico:
+                  summary: Veiculo nao mapeado — diagnostico generico
+                  value:
+                    plate: "MNO3456"
+                    brand: "Honda"
+                    model: "Civic"
+                    year: "2021"
+                    diagnostic: "Recomendamos uma verificacao completa do sistema de ignicao e injecao."
+                diagnostico-via-llm:
+                  summary: Diagnostico gerado pelo LLM adapter (mock)
+                  value:
+                    plate: "PQR4S56"
+                    brand: "Hyundai"
+                    model: "HB20"
+                    year: "2023"
+                    diagnostic: "Possiveis causas: padroes recorrentes observados em Hyundai HB20 2023. Recomendacoes: validar sistema de ignicao, leitura de falhas e inspecao inicial da injecao."
+        "400":
+          description: Placa invalida — formato incorreto ou tamanho fora do range
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                formato-invalido:
+                  summary: Placa com formato incorreto
+                  value:
+                    message: "Plate must match ABC1234 or ABC1D23"
+                muito-curta:
+                  summary: Placa com menos de 7 caracteres
+                  value:
+                    message: "Plate must have at least 7 characters"
+                muito-longa:
+                  summary: Placa com mais de 8 caracteres
+                  value:
+                    message: "Plate must have at most 8 characters"
+        "404":
+          description: |
+            **Estado atual:** Este e o response real, pois a rota nao esta registrada.
+            **Estado esperado:** Veiculo nao encontrado na base.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                rota-inexistente-atual:
+                  summary: Resposta atual (rota nao registrada)
+                  value:
+                    message: "Route POST:/vehicle/identify not found"
+                    error: "Not Found"
+                    statusCode: 404
+                veiculo-nao-encontrado:
+                  summary: Resposta esperada (quando rota for implementada)
+                  value:
+                    message: "Veiculo nao encontrado para a placa informada"
+        "500":
+          description: Erro interno do servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                erro-llm:
+                  summary: Falha no LLM adapter (sem try/catch no servico)
+                  value:
+                    message: "Internal Server Error"
+                    error: "Internal Server Error"
+                    statusCode: 500
+
+components:
+  schemas:
+    IdentifyVehicleRequest:
+      type: object
+      required:
+        - plate
+      properties:
+        plate:
+          type: string
+          minLength: 7
+          maxLength: 8
+          description: |
+            Placa do veiculo. Aceita formatos ABC1234 (antigo) e ABC1D23 (Mercosul).
+            Hifens sao removidos e letras convertidas para uppercase automaticamente.
+          examples:
+            - "ABC1234"
+            - "ABC1D23"
+            - "abc-1d23"
+
+    IdentifyVehicleResponse:
+      type: object
+      required:
+        - plate
+        - brand
+        - model
+        - year
+        - diagnostic
+      properties:
+        plate:
+          type: string
+          minLength: 1
+          description: Placa do veiculo identificado (uppercase, sem hifen)
+          examples:
+            - "ABC1234"
+        brand:
+          type: string
+          minLength: 1
+          description: Marca do veiculo
+          examples:
+            - "Toyota"
+            - "Volkswagen"
+        model:
+          type: string
+          minLength: 1
+          description: Modelo do veiculo
+          examples:
+            - "Corolla"
+            - "Gol G5 1.0"
+        year:
+          type: string
+          minLength: 1
+          description: Ano do veiculo (string, nao numerico)
+          examples:
+            - "2020"
+            - "2015"
+        diagnostic:
+          type: string
+          minLength: 1
+          description: |
+            Texto de diagnostico automotivo. Pode vir de regras
+            deterministicas (4 veiculos mapeados) ou do LLM adapter.
+          examples:
+            - "Possivel falha comum em Corolla: bobina de ignicao."
+            - "Recomendamos uma verificacao completa do sistema de ignicao e injecao."
+
+    HealthResponseActual:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - "ok"
+      description: |
+        Resposta real do servidor. Nota: `healthResponseSchema` do shared
+        espera campos adicionais `service` e `env` que nao sao retornados.
+
+    HealthResponseExpected:
+      type: object
+      required:
+        - status
+        - service
+        - env
+      properties:
+        status:
+          type: string
+          enum:
+            - "ok"
+        service:
+          type: string
+          description: Nome do servico
+          examples:
+            - "vehicle-diagnostic-core"
+        env:
+          type: string
+          description: Ambiente de execucao
+          examples:
+            - "production"
+            - "development"
+      description: Resposta conforme `healthResponseSchema` do `@core/shared`
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Descricao do erro
+        error:
+          type: string
+          description: Tipo do erro HTTP (Fastify default)
+        statusCode:
+          type: integer
+          description: Codigo HTTP (Fastify default)
+
+# ---
+# Escala de confianca:
+#   GET /health          — 🟢 CONFIRMADO (implementado e funcional)
+#   POST /vehicle/identify — 🔴 LACUNA (logica existe, rota nao registrada)
+#   Schemas de request/response — 🟢 CONFIRMADO (extraidos diretamente do Zod)
+#   Exemplos de diagnostico — 🟢 CONFIRMADO (strings literais do diagnosticService.ts)
+#   Payloads de erro — 🟡 INFERIDO (baseado no comportamento padrao do Fastify 5)
+#
+# Gerado pelo Reversa Writer em 2026-05-03
