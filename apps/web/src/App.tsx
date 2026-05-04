@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
-import { identifyVehicle, type VehicleResult } from "./api";
+import { identifyVehicle, type DiagnosticResult, type DataSource } from "./api";
 
-// ─── helpers ────────────────────────────────────────────────────────────────
+// ─── utils ────────────────────────────────────────────────────────────────────
 
 function normalizePlate(raw: string) {
   return raw.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 7);
@@ -11,182 +11,217 @@ function isValidPlate(p: string) {
   return /^[A-Z]{3}[0-9]{4}$/.test(p) || /^[A-Z]{3}[0-9][A-Z][0-9]{2}$/.test(p);
 }
 
-function parseDiagnostic(text: string): string[] {
-  return text
-    .split(/\.\s+|;\s*|\n/)
-    .map((s) => s.replace(/^[-•]\s*/, "").trim())
-    .filter((s) => s.length > 8);
+function fuelIcon(fuel: string) {
+  const f = fuel.toUpperCase();
+  if (f.includes("DIESEL"))   return "⛽";
+  if (f.includes("ELET"))     return "⚡";
+  if (f.includes("HIBRID"))   return "🔋";
+  if (f.includes("GAS"))      return "🔥";
+  return "♻️";
 }
 
-function fuelLabel(raw?: string) {
-  if (!raw) return null;
-  const map: Record<string, string> = {
-    FLEX: "Flex",
-    GASOLINA: "Gasolina",
-    ALCOOL: "Álcool",
-    DIESEL: "Diesel",
-    ELETRICO: "Elétrico",
-    HIBRIDO: "Híbrido",
-  };
-  return map[raw.toUpperCase()] ?? raw;
-}
+// ─── icons ────────────────────────────────────────────────────────────────────
 
-// ─── icons (inline SVG, zero deps) ──────────────────────────────────────────
-
-const CarIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M5 17H3a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h1l2-4h12l2 4h1a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2" />
-    <circle cx="7" cy="17" r="2" /><circle cx="17" cy="17" r="2" />
+const IconCar = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M5 17H3a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h1l2-4h12l2 4h1a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/>
+    <circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/>
   </svg>
 );
 
-const WrenchIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+const IconTag = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 2H2v10l9.29 9.29a1 1 0 0 0 1.42 0l7.58-7.58a1 1 0 0 0 0-1.42Z"/>
+    <circle cx="7" cy="7" r="1.5"/>
   </svg>
 );
 
-const SearchIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+const IconWrench = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
   </svg>
 );
 
-const AlertIcon = () => (
+const IconSearch = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+  </svg>
+);
+
+const IconAlert = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-    <path d="M12 9v4" /><path d="M12 17h.01" />
+    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+    <path d="M12 9v4"/><path d="M12 17h.01"/>
   </svg>
 );
 
-const CheckIcon = () => (
+const IconCheck = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="20 6 9 17 4 12" />
+    <polyline points="20 6 9 17 4 12"/>
   </svg>
 );
 
-// ─── sub-components ──────────────────────────────────────────────────────────
+const IconInfo = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+  </svg>
+);
 
-function Spinner() {
+// ─── skeleton ─────────────────────────────────────────────────────────────────
+
+function Skeleton() {
   return (
-    <div className="spinner-wrap">
-      <div className="spinner" />
-      <span>Consultando placa...</span>
+    <div className="results-grid">
+      {[...Array(4)].map((_, i) => (
+        <div key={i} className={`card sk-card ${i === 2 ? "card-wide" : ""}`}>
+          <div className="sk sk-head" />
+          <div className="sk sk-line" />
+          <div className="sk sk-line sk-short" />
+        </div>
+      ))}
     </div>
   );
 }
 
-function SkeletonCard() {
+// ─── status card ──────────────────────────────────────────────────────────────
+
+function StatusCard({ source }: { source: DataSource }) {
+  const isMock = source === "mock";
+  const label  = source === "n8n" ? "n8n + APIBrasil" : source === "apibrasil" ? "APIBrasil" : "Modo Limitado";
+
   return (
-    <div className="result-shell skeleton-shell">
-      <div className="sk sk-title" />
-      <div className="sk-grid">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="sk sk-block" />
+    <div className={`card status-card ${isMock ? "status-mock" : "status-live"}`}>
+      <div className="card-header">
+        <span className={`card-icon ${isMock ? "icon-warn" : "icon-ok"}`}>
+          {isMock ? <IconAlert /> : <IconCheck />}
+        </span>
+        <span className="card-label">Status da Consulta</span>
+      </div>
+      <div className="status-body">
+        <span className={`status-pill ${isMock ? "pill-mock" : "pill-live"}`}>
+          {isMock ? "⚠ Mock" : "● Dados Reais"}
+        </span>
+        <p className="status-text">
+          {isMock
+            ? "APIs externas indisponíveis. Os dados exibidos são simulados para demonstração."
+            : `Informações obtidas via ${label} em tempo real.`}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── vehicle card ─────────────────────────────────────────────────────────────
+
+function VehicleCard({ v }: { v: DiagnosticResult["vehicle"] }) {
+  const rows = [
+    { label: "Marca",       value: v.brand },
+    { label: "Modelo",      value: v.model },
+    { label: "Ano",         value: v.year },
+    { label: "Combustível", value: `${fuelIcon(v.fuel)} ${v.fuel}` },
+    { label: "Cor",         value: v.color },
+    { label: "Placa",       value: v.plate },
+  ];
+
+  return (
+    <div className="card">
+      <div className="card-header">
+        <span className="card-icon icon-accent"><IconCar /></span>
+        <span className="card-label">Dados do Veículo</span>
+      </div>
+      <div className="vehicle-grid">
+        {rows.map(({ label, value }) => (
+          <div key={label} className="vrow">
+            <span className="vrow-label">{label}</span>
+            <span className="vrow-value">{value || "N/A"}</span>
+          </div>
         ))}
       </div>
-      <div className="sk sk-diag" />
     </div>
   );
 }
 
-function SourceBadge({ source }: { source: VehicleResult["source"] }) {
-  if (source === "mock") {
-    return (
-      <div className="degraded-banner">
-        <AlertIcon />
-        <span>Modo degradado — APIs externas indisponíveis. Dados simulados para demonstração.</span>
-      </div>
-    );
-  }
-  const label = source === "n8n" ? "n8n + APIBrasil" : "APIBrasil";
+// ─── fipe card ────────────────────────────────────────────────────────────────
+
+function FipeCard({ fipe }: { fipe: DiagnosticResult["fipe"] }) {
   return (
-    <div className="source-badge">
-      <CheckIcon />
-      <span>Dados reais via {label}</span>
+    <div className="card fipe-card">
+      <div className="card-header">
+        <span className="card-icon icon-accent"><IconTag /></span>
+        <span className="card-label">Valor FIPE</span>
+      </div>
+      {fipe.value ? (
+        <>
+          <div className="fipe-value">{fipe.value}</div>
+          {fipe.reference && (
+            <span className="fipe-ref">Referência: {fipe.reference}</span>
+          )}
+        </>
+      ) : (
+        <div className="fipe-unavailable">
+          <IconInfo />
+          <span>Valor FIPE não disponível para esta placa</span>
+        </div>
+      )}
     </div>
   );
 }
 
-function InfoPill({ label, value }: { label: string; value: string }) {
+// ─── diagnosis card ───────────────────────────────────────────────────────────
+
+function DiagnosisCard({ diagnosis }: { diagnosis: DiagnosticResult["diagnosis"] }) {
   return (
-    <div className="info-pill">
-      <span className="pill-label">{label}</span>
-      <span className="pill-value">{value}</span>
-    </div>
-  );
-}
-
-function VehicleCard({ result }: { result: VehicleResult }) {
-  const items = [
-    { label: "Marca", value: result.brand },
-    { label: "Modelo", value: result.model },
-    { label: "Ano", value: result.year },
-    result.color ? { label: "Cor", value: result.color } : null,
-    result.fuel  ? { label: "Combustível", value: fuelLabel(result.fuel) ?? result.fuel } : null,
-    { label: "Placa", value: result.plate },
-  ].filter(Boolean) as { label: string; value: string }[];
-
-  const sentences = parseDiagnostic(result.diagnostic);
-
-  return (
-    <div className="result-shell">
-      <SourceBadge source={result.source} />
-
-      {/* vehicle header */}
-      <div className="vehicle-header">
-        <div className="vehicle-icon-wrap">
-          <CarIcon />
-        </div>
-        <div>
-          <h2 className="vehicle-title">{result.brand} {result.model}</h2>
-          <p className="vehicle-sub">{result.year} · {result.plate}</p>
-        </div>
+    <div className="card card-wide">
+      <div className="card-header">
+        <span className="card-icon icon-accent"><IconWrench /></span>
+        <span className="card-label">Diagnóstico Preliminar</span>
       </div>
-
-      {/* info grid */}
-      <div className="info-grid">
-        {items.map((it) => (
-          <InfoPill key={it.label} label={it.label} value={it.value} />
-        ))}
-      </div>
-
-      {/* diagnostic */}
-      <div className="diag-card">
-        <div className="diag-header">
-          <WrenchIcon />
-          <span>Diagnóstico Inicial</span>
-        </div>
-        <ul className="diag-list">
-          {sentences.map((s, i) => (
-            <li key={i} className="diag-item">
-              <span className="diag-dot" />
-              {s}.
+      <div className="diag-summary">{diagnosis.summary}</div>
+      {diagnosis.recommendations.length > 0 && (
+        <ul className="diag-recs">
+          {diagnosis.recommendations.map((r, i) => (
+            <li key={i} className="diag-rec">
+              <span className="rec-dot" />
+              {r}
             </li>
           ))}
         </ul>
-      </div>
-
-      <p className="disclaimer">
-        Este diagnóstico é preliminar. Recomendamos inspeção presencial em oficina credenciada.
+      )}
+      <p className="diag-disclaimer">
+        Diagnóstico gerado por IA com base em padrões do modelo. Recomendamos inspeção presencial.
       </p>
     </div>
   );
 }
 
-// ─── main app ────────────────────────────────────────────────────────────────
+// ─── error state ──────────────────────────────────────────────────────────────
+
+function ErrorState({ message }: { message: string }) {
+  return (
+    <div className="error-state">
+      <div className="error-icon"><IconAlert /></div>
+      <div>
+        <strong>Não foi possível consultar o veículo</strong>
+        <p>{message}</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── main app ─────────────────────────────────────────────────────────────────
 
 type Status = "idle" | "loading" | "success" | "error";
 
 export default function App() {
   const [raw, setRaw]       = useState("");
   const [status, setStatus] = useState<Status>("idle");
-  const [result, setResult] = useState<VehicleResult | null>(null);
+  const [result, setResult] = useState<DiagnosticResult | null>(null);
   const [errMsg, setErrMsg] = useState("");
   const inputRef            = useRef<HTMLInputElement>(null);
 
   const plate = normalizePlate(raw);
-  const ready = isValidPlate(plate) && status !== "loading";
+  const valid = isValidPlate(plate);
+  const ready = valid && status !== "loading";
 
   async function handleSearch(e?: React.FormEvent) {
     e?.preventDefault();
@@ -206,99 +241,88 @@ export default function App() {
     }
   }
 
-  function handlePlateChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setRaw(normalizePlate(e.target.value));
-    if (status !== "idle") {
-      setStatus("idle");
-      setResult(null);
-      setErrMsg("");
-    }
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = normalizePlate(e.target.value);
+    setRaw(val);
+    if (status !== "idle") { setStatus("idle"); setResult(null); setErrMsg(""); }
   }
 
   return (
-    <div className="app-shell">
+    <div className="shell">
+
       {/* ── header ── */}
-      <header className="top-bar">
+      <header className="topbar">
         <div className="logo">
-          <span className="logo-icon">⬡</span>
-          <span className="logo-text">Felix<span className="logo-ai">AI</span></span>
+          <span className="logo-hex">⬡</span>
+          <span>Felix<span className="logo-hi">AI</span></span>
         </div>
-        <span className="badge-beta">Beta</span>
+        <nav className="topbar-right">
+          <span className="chip-beta">Beta</span>
+        </nav>
       </header>
 
       {/* ── hero ── */}
-      <main className="hero">
-        <p className="eyebrow">Diagnóstico Automotivo com IA</p>
-        <h1 className="hero-title">
-          Consulte qualquer<br />
-          <span className="accent">veículo em segundos</span>
-        </h1>
-        <p className="hero-sub">
-          Digite a placa e receba informações do veículo e um diagnóstico preliminar gerado por inteligência artificial.
-        </p>
+      <main className="main">
+        <section className="hero">
+          <p className="eyebrow">Diagnóstico Automotivo com IA</p>
+          <h1 className="hero-h1">
+            Consulte qualquer veículo<br />
+            <em className="hero-em">em segundos</em>
+          </h1>
+          <p className="hero-sub">
+            Insira a placa e receba informações do veículo, valor FIPE e um diagnóstico
+            preliminar gerado por inteligência artificial.
+          </p>
+        </section>
 
-        {/* search panel */}
-        <form className="search-panel" onSubmit={handleSearch}>
-          <label className="search-label" htmlFor="plate-input">
-            Placa do veículo
-          </label>
+        {/* ── search ── */}
+        <form className="search-box" onSubmit={handleSearch}>
+          <label className="search-label" htmlFor="plate">Placa do veículo</label>
           <div className="search-row">
-            <div className="input-wrap">
+            <div className="input-group">
               <input
-                id="plate-input"
+                id="plate"
                 ref={inputRef}
                 value={plate}
-                onChange={handlePlateChange}
+                onChange={handleChange}
                 placeholder="ABC1D23"
                 maxLength={7}
                 disabled={status === "loading"}
                 autoComplete="off"
                 spellCheck={false}
-                className={`plate-input ${plate.length > 0 && !isValidPlate(plate) ? "input-invalid" : ""}`}
+                className={`plate-field ${plate.length > 0 && !valid ? "plate-invalid" : ""}`}
               />
-              {plate.length > 0 && !isValidPlate(plate) && (
-                <span className="input-hint">Formato: ABC1234 ou ABC1D23</span>
+              {plate.length > 0 && !valid && (
+                <span className="field-hint">Formato aceito: ABC1234 ou ABC1D23</span>
               )}
             </div>
-            <button
-              type="submit"
-              disabled={!ready}
-              className="cta-button"
-            >
-              <SearchIcon />
-              <span>Consultar</span>
+            <button type="submit" disabled={!ready} className="btn-cta">
+              {status === "loading"
+                ? <><span className="btn-spin" />Consultando…</>
+                : <><IconSearch /><span>Diagnosticar veículo</span></>
+              }
             </button>
           </div>
         </form>
 
-        {/* states */}
-        <div className="result-area">
-          {status === "loading" && (
-            <>
-              <Spinner />
-              <SkeletonCard />
-            </>
-          )}
+        {/* ── states ── */}
+        {status === "loading" && <Skeleton />}
 
-          {status === "error" && (
-            <div className="error-card">
-              <AlertIcon />
-              <div>
-                <strong>Não foi possível consultar o veículo</strong>
-                <p>{errMsg}</p>
-              </div>
-            </div>
-          )}
+        {status === "error" && <ErrorState message={errMsg} />}
 
-          {status === "success" && result && (
-            <VehicleCard result={result} />
-          )}
-        </div>
+        {status === "success" && result && (
+          <div className="results-grid" role="region" aria-label="Resultado da consulta">
+            <VehicleCard v={result.vehicle} />
+            <FipeCard fipe={result.fipe} />
+            <DiagnosisCard diagnosis={result.diagnosis} />
+            <StatusCard source={result.source} />
+          </div>
+        )}
       </main>
 
       {/* ── footer ── */}
-      <footer className="app-footer">
-        <span>© 2026 Felix AI — Diagnóstico Automotivo</span>
+      <footer className="foot">
+        <span>© 2026 Felix AI — Diagnóstico Automotivo para Oficinas</span>
       </footer>
     </div>
   );
